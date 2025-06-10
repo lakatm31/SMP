@@ -1,0 +1,119 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Transmitter Simulation</title>
+    <link rel="stylesheet" href="{% static 'css/simulation.css' %}" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</head>
+<body>
+    <div class="container">
+        <h1>Transmitter Simulation</h1>
+
+        <!-- Exit/Login links -->
+        <div style="text-align: right; margin-bottom: 10px;">
+            {% if user.is_authenticated %}
+                <a href="{% url 'logout' %}">Logout</a>
+            {% else %}
+                <a href="{% url 'login' %}">Login</a>
+            {% endif %}
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <p>
+                {{ form.latitude.label_tag }}<br/>
+                {{ form.latitude }}
+                {% if form.latitude.errors %}
+                    <br><span style="color:red;">{{ form.latitude.errors }}</span>
+                {% endif %}
+            </p>
+
+            <p>
+                {{ form.longitude.label_tag }}<br/>
+                {{ form.longitude }}
+                {% if form.longitude.errors %}
+                    <br><span style="color:red;">{{ form.longitude.errors }}</span>
+                {% endif %}
+            </p>
+
+            <p>
+                {{ form.power_kw.label_tag }}<br/>
+                {{ form.power_kw }}
+                {% if form.power_kw.errors %}
+                    <br><span style="color:red;">{{ form.power_kw.errors }}</span>
+                {% endif %}
+            </p>
+
+            <p>
+                {{ form.frequency_mhz.label_tag }}<br/>
+                {{ form.frequency_mhz }}
+                {% if form.frequency_mhz.errors %}
+                    <br><span style="color:red;">{{ form.frequency_mhz.errors }}</span>
+                {% endif %}
+            </p>
+
+            <p>
+                {{ form.target_field_strength.label_tag }}<br/>
+                {{ form.target_field_strength }}
+                {% if form.target_field_strength.errors %}
+                    <br><span style="color:red;">{{ form.target_field_strength.errors }}</span>
+                {% endif %}
+            </p>
+
+            <button type="submit">Run Simulation</button>
+        </form>
+
+        <!-- Térkép -->
+        <div id="map" style="height: 500px; width: 100%; margin-top: 20px;"></div>
+
+        <script>
+            var lat = parseFloat("{{ kord.lat|default:47.497913 }}");
+            var lng = parseFloat("{{ kord.lng|default:19.040236 }}");
+            var zoom = parseInt("{{ kord.zoom|default:10 }}");
+
+            var map = L.map('map').setView([lat, lng], zoom);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+            }).addTo(map);
+
+            L.marker([lat, lng]).addTo(map)
+                .bindPopup('A megadott hely')
+                .openPopup();
+            
+
+            L.marker([47.5100, 19.0450]).addTo(map)
+          .bindPopup("Második marker helye");
+
+        // Egérkattintásra új marker létrehozása
+                var currentMarker = null;  // ide mentjük az aktuális markert
+
+            map.on('click', function(e) {
+                var lat = e.latlng.lat;
+                var lng = e.latlng.lng;
+
+                // ha már van marker, eltávolítjuk
+                if (currentMarker) {
+                    map.removeLayer(currentMarker);
+                }
+
+                // új marker létrehozása
+                currentMarker = L.marker([lat, lng]).addTo(map)
+                    .bindPopup("Koordináták:<br>" + lat.toFixed(5) + ", " + lng.toFixed(5))
+                    .openPopup();
+            });
+            
+        </script>
+
+        {% if result %}
+            <h2>Result</h2>
+            <p>Distance: {{ result.max_distance_m }} m</p>
+            <p>Field Strength: {{ result.target_field_strength_dBuV_m }} dBμV/m</p>
+        {% endif %}
+    </div>
+</body>
+</html>
