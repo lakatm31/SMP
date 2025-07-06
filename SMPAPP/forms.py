@@ -12,7 +12,7 @@ class TransmitterForm(forms.Form):
     )
     power_kw = forms.FloatField(label="Power (kW)")
     frequency_mhz = forms.FloatField(label="Frequency (MHz)")
-    target_field_strength = forms.FloatField(label="Target Field Strength (dBμV/m)")
+    target_field_strength = forms.FloatField(label="Target Field Strength (V/m)")
 
     def clean_latitude(self):
         value = self.cleaned_data['latitude']

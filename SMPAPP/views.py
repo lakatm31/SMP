@@ -4,6 +4,7 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from .forms import TransmitterForm
 from .utils import calculate_max_distance
+from .models import SimulationRecord 
 
 def signup_view(request):
     if request.method == 'POST':
@@ -31,45 +32,44 @@ def logout_view(request):
     return redirect('login')
 
 @login_required
+@login_required
 def simulation(request):
-    lat = 47.497913  # Budapest alapértelmezett
-    lng = 19.040236
-    zoom = 10
     result = None
-
-    if request.method == 'POST':
+    if request.method == "POST":
         form = TransmitterForm(request.POST)
         if form.is_valid():
-            lat = form.cleaned_data['latitude']
-            lng = form.cleaned_data['longitude']
+            latitude = form.cleaned_data['latitude']
+            longitude = form.cleaned_data['longitude']
             power_kw = form.cleaned_data['power_kw']
             frequency_mhz = form.cleaned_data['frequency_mhz']
             target_field_strength = form.cleaned_data['target_field_strength']
 
-            #antenna_height = 30   fix érték vagy később űrlapról
+            
+            result = calculate_max_distance(power_kw, frequency_mhz, target_field_strength)
 
-            try:
-                result = calculate_max_distance(
-                    #lat, lng,
-                    power_kw,  # kW
-                    #antenna_height,
-                    frequency_mhz,
-                    target_field_strength
-                )
-            except Exception as e:
-                result = f"Hiba a számítás során: {e}"
+            SimulationRecord.objects.create(
+                user=request.user,
+                latitude=latitude,
+                longitude=longitude,
+                power_kw=power_kw,
+                frequency_mhz=frequency_mhz,
+                target_field_strength=target_field_strength,
+                result_distance=result['max_distance_m'],
+                method_used=result['method']
+            )
+          
+            decimal_lat = latitude
+            decimal_lng = longitude
+
+            return render(request, "simulation.html", {
+                'form': form,
+                'result': result,
+                'decimal_lat': decimal_lat,
+                'decimal_lng': decimal_lng,
+            })
     else:
         form = TransmitterForm()
 
-    context = {
-        'form': form,
-        'result': result,
-        'kord': {
-            'lat': lat,
-            'lng': lng,
-            'zoom': zoom,
-        }
-    }
+    return render(request, "simulation.html", {'form': form, 'result': result})
 
-    return render(request, 'simulation.html', context)
 

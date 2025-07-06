@@ -2,10 +2,10 @@ body {
     margin: 0;
     padding: 0;
     font-family: system-ui, sans-serif;
-    background: url('/static/images/simulation_background.jpg') no-repeat center center fixed;
+    background: url('/static/images/background.jpg') no-repeat center center fixed;
     background-color: black;
-    background-size: contain; 
-    color: #333;
+    background-size: cover;
+    color: #f5f5f5;
 }
 
 header {
@@ -15,12 +15,11 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    position: relative;
 }
 
 header h1 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: 1.75rem;
 }
 
 nav ul {
@@ -50,17 +49,16 @@ nav a:hover {
     cursor: pointer;
 }
 
-/* Responsive menu */
 @media (max-width: 600px) {
     nav ul {
         display: none;
         flex-direction: column;
-        background-color: #0022ff2f;
+        background-color: rgba(0, 34, 255, 0.15);
         position: absolute;
         top: 60px;
         right: 20px;
         border-radius: 8px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     nav ul.show {
@@ -73,17 +71,84 @@ nav a:hover {
 }
 
 .container {
+    max-width: 900px;
+    margin: 0 auto;
     padding: 40px 20px;
     text-align: center;
 }
 
 .container h2 {
     font-size: 2rem;
-    margin-bottom: 10px;
-    color: white
+    margin-bottom: 10px;-
+    
 }
 
 .container p {
     font-size: 1.1rem;
+    color: #dddddd;
+}
+
+form {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+    display: grid;
+    gap: 15px;
+}
+
+form p {
+    margin: 0;
+    text-align: left;
+    color: black;
+}
+
+form input {
+    width: 100%;
+    padding: 8px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background: #222;
+    color: #fff;
+}
+
+button[type="submit"] {
+    background-color: #28a745;
     color: white;
+    padding: 10px 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+button[type="submit"]:hover {
+    background-color: #218838;
+}
+
+#map {
+    height: 500px;
+    width: 100%;
+    margin-top: 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+}
+
+
+.result-box {
+    background-color: rgba(0, 0, 0, 0.7);
+    color: rgba(255, 255, 255, 1);
+    padding: 20px;
+    margin-top: 30px;
+    border-radius: 10px;
+  
+    text-align: left;
+}
+
+.result-box h2 {
+    margin-top: 0;
+    color: #cce5ff;
+    text-shadow: none;
 }

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <title>Transmitter Simulation</title>
-    <link rel="stylesheet" href="{% static 'css/simulation.css' %}" />
+    <link rel="stylesheet" href="{% static 'simulation.css' %}" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
@@ -12,7 +12,6 @@
     <div class="container">
         <h1>Transmitter Simulation</h1>
 
-        <!-- Exit/Login links -->
         <div style="text-align: right; margin-bottom: 10px;">
             {% if user.is_authenticated %}
                 <a href="{% url 'logout' %}">Logout</a>
@@ -23,97 +22,136 @@
 
         <form method="post">
             {% csrf_token %}
-
             <p>
                 {{ form.latitude.label_tag }}<br/>
                 {{ form.latitude }}
-                {% if form.latitude.errors %}
-                    <br><span style="color:red;">{{ form.latitude.errors }}</span>
-                {% endif %}
+                {% for error in form.latitude.errors %}
+                    <br><span style="color:red;">{{ error }}</span>
+                {% endfor %}
             </p>
-
             <p>
                 {{ form.longitude.label_tag }}<br/>
                 {{ form.longitude }}
-                {% if form.longitude.errors %}
-                    <br><span style="color:red;">{{ form.longitude.errors }}</span>
-                {% endif %}
+                {% for error in form.longitude.errors %}
+                    <br><span style="color:red;">{{ error }}</span>
+                {% endfor %}
             </p>
-
             <p>
                 {{ form.power_kw.label_tag }}<br/>
                 {{ form.power_kw }}
-                {% if form.power_kw.errors %}
-                    <br><span style="color:red;">{{ form.power_kw.errors }}</span>
-                {% endif %}
+                {% for error in form.power_kw.errors %}
+                    <br><span style="color:red;">{{ error }}</span>
+                {% endfor %}
             </p>
-
             <p>
                 {{ form.frequency_mhz.label_tag }}<br/>
                 {{ form.frequency_mhz }}
-                {% if form.frequency_mhz.errors %}
-                    <br><span style="color:red;">{{ form.frequency_mhz.errors }}</span>
-                {% endif %}
+                {% for error in form.frequency_mhz.errors %}
+                    <br><span style="color:red;">{{ error }}</span>
+                {% endfor %}
             </p>
-
             <p>
                 {{ form.target_field_strength.label_tag }}<br/>
                 {{ form.target_field_strength }}
-                {% if form.target_field_strength.errors %}
-                    <br><span style="color:red;">{{ form.target_field_strength.errors }}</span>
-                {% endif %}
+                {% for error in form.target_field_strength.errors %}
+                    <br><span style="color:red;">{{ error }}</span>
+                {% endfor %}
             </p>
-
             <button type="submit">Run Simulation</button>
         </form>
 
-        <!-- Térkép -->
         <div id="map" style="height: 500px; width: 100%; margin-top: 20px;"></div>
 
-        <script>
-            var lat = parseFloat("{{ kord.lat|default:47.497913 }}");
-            var lng = parseFloat("{{ kord.lng|default:19.040236 }}");
-            var zoom = parseInt("{{ kord.zoom|default:10 }}");
+        {% if result %}
+            <div class="result-box">
+                <h2>Result</h2>
+                <p>Calculation method: {{ result.method }}</p>
+                <p>Distance: {{ result.max_distance_m }} m</p>
+                <p>Field Strength: {{ result.target_field_strength_vpm }} V/m</p>
+            </div>
+        {% endif %}
 
-            var map = L.map('map').setView([lat, lng], zoom);
+        <script>
+            const transmitterLat = {{ decimal_lat|default:"47.497913" }};
+            const transmitterLng = {{ decimal_lng|default:"19.040236" }};
+            const resultDistance = {{ result.max_distance_m|default:"0" }};
+
+            const map = L.map('map').setView([transmitterLat, transmitterLng], 10);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors',
             }).addTo(map);
 
-            L.marker([lat, lng]).addTo(map)
-                .bindPopup('A megadott hely')
-                .openPopup();
-            
+            fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${transmitterLat},${transmitterLng}`)
+                .then(response => response.json())
+                .then(data => {
+                    const elevation = data.results[0].elevation.toFixed(1);
+                    const popupContent = `
+                        Koordináta: ${transmitterLat}, ${transmitterLng}<br>
+                        Magasság: ${elevation} m
+                    `;
+                    L.marker([transmitterLat, transmitterLng]).addTo(map)
+                        .bindPopup(popupContent)
+                        .openPopup();
 
-            L.marker([47.5100, 19.0450]).addTo(map)
-          .bindPopup("Második marker helye");
+                    if (resultDistance > 0) {
+                        L.circle([transmitterLat, transmitterLng], {
+                            radius: resultDistance,
+                            color: 'blue',
+                            fillOpacity: 0.1
+                        }).addTo(map);
 
-        // Egérkattintásra új marker létrehozása
-                var currentMarker = null;  // ide mentjük az aktuális markert
+                        function destinationPoint(lat, lng, distance, bearing) {
+                            const R = 6371000;
+                            const δ = distance / R;
+                            const θ = bearing * Math.PI / 180;
+                            const φ1 = lat * Math.PI / 180;
+                            const λ1 = lng * Math.PI / 180;
 
-            map.on('click', function(e) {
-                var lat = e.latlng.lat;
-                var lng = e.latlng.lng;
+                            const φ2 = Math.asin(
+                                Math.sin(φ1) * Math.cos(δ) +
+                                Math.cos(φ1) * Math.sin(δ) * Math.cos(θ)
+                            );
+                            const λ2 = λ1 + Math.atan2(
+                                Math.sin(θ) * Math.sin(δ) * Math.cos(φ1),
+                                Math.cos(δ) - Math.sin(φ1) * Math.sin(φ2)
+                            );
 
-                // ha már van marker, eltávolítjuk
-                if (currentMarker) {
-                    map.removeLayer(currentMarker);
-                }
+                            return [φ2 * 180 / Math.PI, λ2 * 180 / Math.PI];
+                        }
 
-                // új marker létrehozása
-                currentMarker = L.marker([lat, lng]).addTo(map)
-                    .bindPopup("Koordináták:<br>" + lat.toFixed(5) + ", " + lng.toFixed(5))
-                    .openPopup();
-            });
-            
+                        const directions = [
+                            { bearing: 0, label: "Észak" },
+                            { bearing: 90, label: "Kelet" },
+                            { bearing: 180, label: "Dél" },
+                            { bearing: 270, label: "Nyugat" }
+                        ];
+
+                        directions.forEach(dir => {
+                            const [lat, lng] = destinationPoint(transmitterLat, transmitterLng, resultDistance, dir.bearing);
+
+                            fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lng}`)
+                                .then(response => response.json())
+                                .then(data => {
+                                    const elevation = data.results[0].elevation.toFixed(1);
+                                    L.marker([lat, lng]).addTo(map)
+                                        .bindPopup(`${dir.label}<br>Távolság: ${resultDistance.toFixed(0)} m<br>Magasság: ${elevation} m`);
+                                })
+                                .catch(err => {
+                                    console.error("Magasság lekérés hiba:", err);
+                                    L.marker([lat, lng]).addTo(map)
+                                        .bindPopup(`${dir.label}<br>Távolság: ${resultDistance.toFixed(0)} m<br>Magasság: nem elérhető`);
+                                });
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error("Magasság lekérés hiba az adó helyén:", err);
+                    L.marker([transmitterLat, transmitterLng]).addTo(map)
+                        .bindPopup(`Koordináta: ${transmitterLat.toFixed(6)}, ${transmitterLng.toFixed(6)}<br>Magasság: nem elérhető`)
+                        .openPopup();
+                });
         </script>
-
-        {% if result %}
-            <h2>Result</h2>
-            <p>Distance: {{ result.max_distance_m }} m</p>
-            <p>Field Strength: {{ result.target_field_strength_dBuV_m }} dBμV/m</p>
-        {% endif %}
     </div>
 </body>
 </html>
